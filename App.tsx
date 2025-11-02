@@ -64,22 +64,34 @@ const parseCSV = (text: string): User[] => {
     // Validate that all required headers are present
     for (const header in requiredHeaderMap) {
       if (requiredHeaderMap[header] === -1) {
-        console.error(`CSV missing required header: ${header}`);
-        throw new Error(`CSV is missing the required header: "${header}"`);
+        console.warn(`CSV missing optional header: ${header}`);
       }
     }
 
-    return rows.slice(1).map(values => {
+    return rows.slice(1).map((values, index) => {
       const firstName = values[requiredHeaderMap['First Name']]?.trim() || '';
       const lastName = values[requiredHeaderMap['Last Name']]?.trim() || '';
       const email = values[requiredHeaderMap['Email']]?.trim() || '';
-      const imageUrl = values[requiredHeaderMap['Image']]?.trim() || '';
+      let imageUrl = values[requiredHeaderMap['Image']]?.trim() || '';
       const interestsStr = values[requiredHeaderMap['Interests']]?.trim() || '';
 
-      if (!email || !firstName) return null;
+      const name = `${firstName} ${lastName}`.trim();
+      
+      // A user must have at least a name or an email to be useful
+      if (!name && !email) {
+        return null;
+      }
+
+      const id = email || `csv-user-${index}`;
+
+      if (!imageUrl) {
+        // Provide a consistent placeholder avatar based on the user's unique ID
+        imageUrl = `https://i.pravatar.cc/256?u=${id}`;
+      }
 
       return {
-        name: `${firstName} ${lastName}`,
+        id,
+        name: name || 'N/A',
         email: email,
         imageUrl: imageUrl,
         interests: interestsStr ? interestsStr.split(';').map(i => i.trim()).filter(i => i) : [],
@@ -109,9 +121,9 @@ const App: React.FC = () => {
         const csvText = await response.text();
         const parsedUsers = parseCSV(csvText);
 
-        // Prevent adding duplicate users based on email
+        // Prevent adding duplicate users based on ID
         const newUsers = parsedUsers.filter(newUser => 
-          !allUsers.some(existingUser => existingUser.email === newUser.email)
+          !allUsers.some(existingUser => existingUser.id === newUser.id)
         );
 
         setAllUsers(prevUsers => [...prevUsers, ...newUsers]);
@@ -173,7 +185,7 @@ const App: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {filteredUsers.map((user) => (
             <UserCard 
-              key={user.email} 
+              key={user.id} 
               user={user} 
               onCardClick={handleCardClick} 
             />
