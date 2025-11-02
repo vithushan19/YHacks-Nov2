@@ -126,7 +126,7 @@ const App: React.FC = () => {
           !allUsers.some(existingUser => existingUser.id === newUser.id)
         );
 
-        setAllUsers(prevUsers => [...prevUsers, ...newUsers]);
+        setAllUsers(prevUsers => [...newUsers, ...prevUsers]);
       } catch (e) {
         if (e instanceof Error) {
             setError(e.message);
